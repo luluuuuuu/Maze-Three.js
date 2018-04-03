@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>Maze Generation Prototype</title>
+    <script type="text/javascript" src="three.js"></script>
+    <script type="text/javascript" src="jquery-3.3.1.js"></script>
+    <style>
+		body{margin: 0;overflow: hidden;}
+    </style>
+  </head>
+  <body>
+    <div id="WebGL-output"></div>
+    <div id="Stats-output"></div>
+      <script type="text/javascript">
+      $(function() {  	
+		function mazegen(x,y,z) {
+			var n=x*y*z-1;
+			if (n<0 || n>Math.pow(200,3)) {alert("illegal maze dimensions");return;}
+			var wx=[];
+			for (var i=0;i<x+1;i++){
+				wx[i]=[];
+				for (var j=0;j<z;j++) {
+					wx[i][j]=[];
+					for (var k=0;k<y;k++) {
+						wx[i][j][k]=false;
+					};
+				};
+			};
+			var wy=[];
+			for (var i=0;i<z+1;i++){
+				wy[i]=[];
+				for (var j=0;j<x;j++) {
+					wy[i][j]=[];
+					for (var k=0;k<y;k++) {
+						wy[i][j][k]=false;
+					};
+				};
+			};
+			var wz=[];
+			for (var i=0;i<y+1;i++){
+				wz[i]=[];
+				for (var j=0;j<x;j++) {
+					wz[i][j]=[];
+					for (var k=0;k<z;k++) {
+						wz[i][j][k]=false;
+					};
+				};
+			};
+			var unvisited = [];
+			for (var i=0;i<x;i++){
+				unvisited[i]=[];
+				for (var j=0;j<y;j++) {
+					unvisited[i][j]=[];
+					for (var k=0;k<z;k++) {
+						unvisited[i][j][k]=1;
+					};
+				};
+			};
+			var start = [Math.floor(Math.random()*x),Math.floor(Math.random()*y),Math.floor(Math.random()*z)];
+			var here = start;
+			unvisited[here[0]][here[1]][here[2]]=0;
+			var path = [here];
+			var dead = 0;
+			var deadends=[here];
+			var popp = false;
+			while(n>0) {
+				var potential = [];
+				var neighbors = [];
+				if (here[0]+1<x) {potential.push([here[0]+1,here[1],here[2]])};
+				if (here[1]+1<y) {potential.push([here[0],here[1]+1,here[2]])};
+				if (here[2]+1<z) {potential.push([here[0],here[1],here[2]+1])};
+				if (here[0]-1>=0) {potential.push([here[0]-1,here[1],here[2]])};
+				if (here[1]-1>=0) {potential.push([here[0],here[1]-1,here[2]])};
+				if (here[2]-1>=0) {potential.push([here[0],here[1],here[2]-1])};
+				for (j=0;j<potential.length;j++) {
+					if (unvisited[potential[j][0]][potential[j][1]][potential[j][2]]==1) {neighbors.push(potential[j])};
+				};
+				if (neighbors.length){
+					n--;
+					next = neighbors[Math.floor(Math.random()*neighbors.length)];
+					unvisited[next[0]][next[1]][next[2]]=0;
+					if (next[1]==here[1] && next[2]==here[2]) {
+						wx[Math.ceil((next[0]+here[0])/2)][next[2]][next[1]]=true;
+					}
+					else if (next[0]==here[0] && next[2]==here[2]) {
+						wz[Math.ceil((next[1]+here[1])/2)][next[0]][next[2]]=true;
+					}
+					else {
+						wy[Math.ceil((next[2]+here[2])/2)][next[0]][next[1]]=true;
+					};
+					if (popp == true) {
+						popp = false;
+						path.push(here);
+					}
+					path.push(next);
+					here = next;
+					dead = 0;
+				}
+				else {
+					here=path.pop();
+					popp = true;
+					if (dead == 0) {dead = 1; deadends.push(here)};
+				};
+			};
+			deadends.push(here);
+			if (deadends.length==1) {deadends.push(start)};
+			
+						
+			var pairs = [];
+			for (var i=0;i<deadends.length-1;i++) {
+				var dx = deadends[i];
+				for (var j=i;j<deadends.length-1;j++) {
+					var dy = deadends[j+1];
+					pairs.push([dx,dy]);
+				};
+			};			
+			var iterations = Math.min(Math.floor(0.5*deadends.length*(deadends.length-1)),Math.floor(5000/(x*y/Math.pow(33,2))));
+			var maxpath = [];
+			var popp = false;
+			while (iterations > 0) {
+				currentpair = pairs.splice(Math.floor(Math.random()*pairs.length),1);
+				start = currentpair[0][0];
+				end = currentpair[0][1];
+				path = [];
+				path.push(start);
+				here = start;
+				unvisited = [];
+				for (var i=0;i<x;i++){
+					unvisited[i]=[];
+					for (var j=0;j<y;j++) {
+						unvisited[i][j]=[];
+						for (var k=0;k<z;k++) {
+							unvisited[i][j][k]=1;
+						};
+					};
+				};
+				unvisited[here[0]][here[1]][here[2]]=0;
+				while (!(here[0]==end[0] && here[1]==end[1] && here[2]==end[2])) {
+					var neighbors = [];
+					var potential = [];
+					if (here[0]+1<x) {potential.push([here[0]+1,here[1],here[2]])};
+					if (here[1]+1<y) {potential.push([here[0],here[1]+1,here[2]])};
+					if (here[2]+1<z) {potential.push([here[0],here[1],here[2]+1])};
+					if (here[0]-1>=0) {potential.push([here[0]-1,here[1],here[2]])};
+					if (here[1]-1>=0) {potential.push([here[0],here[1]-1,here[2]])};
+					if (here[2]-1>=0) {potential.push([here[0],here[1],here[2]-1])};
+					for (j=0;j<potential.length;j++) {
+						if (unvisited[potential[j][0]][potential[j][1]][potential[j][2]]==1 && ((potential[j][1]==here[1]&&potential[j][2]==here[2]&&(wx[Math.ceil((potential[j][0]+here[0])/2)][potential[j][2]][potential[j][1]]==true)) || (potential[j][0]==here[0]&&potential[j][2]==here[2]&&wz[Math.ceil((potential[j][1]+here[1])/2)][potential[j][0]][potential[j][2]]==true) || (potential[j][0]==here[0]&&potential[j][1]==here[1]&&wy[Math.ceil((potential[j][2]+here[2])/2)][potential[j][0]][potential[j][1]]==true))) {
+							neighbors = potential[j];
+						};
+					};
+					if(neighbors.length==3) {
+						if (popp == true) {
+							popp = false;
+							path.push(here);
+						}
+						next = neighbors;
+						path.push(next);
+						here = next;
+						unvisited[next[0]][next[1]][next[2]]=0;
+					}
+					else {here = path.pop(); popp = true};
+				};
+				if (maxpath.length<path.length) {maxpath = path; fstart=start; var fend=end;};
+				iterations--;
+			};
+			pgeom.position.set(-3.75*x+7.5*(fstart[0]+0.5),-3.75*y+7.5*(fstart[1]+0.5),-3.75*z+7.5*(fstart[2]+0.5));
+			egeom.position.set(-3.75*x+7.5*(fend[0]+0.5),-3.75*y+7.5*(fend[1]+0.5),-3.75*z+7.5*(fend[2]+0.5));
+
+			pathway = []
+			wincolor = new THREE.Color();
+			wincolor.setHSL(Math.random(),0.5,0.5)
+			material = new THREE.MeshPhongMaterial({opacity:0.5,color:wincolor,emissive:wincolor,shininess:100});
+			for (var j=0;j<maxpath.length;j++){pathway.push(new THREE.Vector3(-3.75*x+7.5*(maxpath[j][0]+0.5),-3.75*x+7.5*(maxpath[j][1]+0.5+(x-y)/2),-3.75*x+7.5*(maxpath[j][2]+0.5+(x-z)/2)))};
+			route = new THREE.CatmullRomCurve3(pathway,false,"catmullrom",0.01);
+			pathgeom = new THREE.TubeBufferGeometry(route,10*maxpath.length,0.5,12);
+			pathmesh = new THREE.Mesh(pathgeom,material);
+			
+			doorcount = Math.floor(-(Math.log(20/((-1 + Math.sqrt(5))* maxpath.length)))/(Math.log(2) - Math.log(-1 + Math.sqrt(5))));
+			//doorcount = Math.floor((Math.log(50*(-maxpath.length + Math.sqrt(5)*maxpath.length)))/(-Math.log(2) + Math.log(1 + Math.sqrt(5))));
+			//doorcount = Math.ceil(maxpath.length/(Math.random()*7+1));
+			//doorcount = Math.ceil(maxpath.length-3);
+			
+			maxpath.pop();
+			maxpath.shift();
+			deadends.shift();
+
+			if (doorcount < 1) {doorcount = 1};
+			//https://www.desmos.com/calculator/1g8t1edehl
+			//variation = maxpath.length*(0.05*Math.random());
+			//variation = maxpath.length/(1*doorcount);
+			variation = 0;
+			varsign = 0;
+			while (varsign==0) {varsign = Math.round(Math.random()*2-1)}
+			if (maxpath.length >= 4) {
+				for(i=0;i<doorcount;i++) {
+//				for(i=0;i<doorcount-1;i++) {
+					maxpath.pop();
+					maxpath.shift();
+					mplpick = Math.round((maxpath.length*(((doorcount-i)/doorcount)+Math.pow((((1+Math.sqrt(5))/2)-1),i+1))/2)+varsign*variation);
+					beforecoords = maxpath[mplpick-1];
+					doorcoords = maxpath[mplpick];
+//					beforecoords = maxpath[Math.ceil(mplpick/4+maxpath.length/2)-2];
+//					doorcoords = maxpath[Math.ceil(mplpick/4+maxpath.length/2)-1];
+					if (doorcoords[0] != beforecoords[0]){orient = "xa"}
+					else if (doorcoords[1] != beforecoords[1]) {orient="ya"}
+					else {orient = "za"};
+					keypath = [];
+					var popp = false;
+					choptable = deadends.slice();
+					while (keypath.length <= 0 && choptable.length > 0) {
+						start = fstart;
+						selection = choptable.splice(Math.floor(Math.random()*choptable.length),1)
+						end = [selection[0][0],selection[0][1],selection[0][2]];
+
+						for (j=0;j<doorcount;j++) {
+							if (scene.getObjectByName("key"+j)) {
+								a = scene.getObjectByName("key"+j);
+								b = -3.75*x+7.5*(end[0]+0.5);
+								c = -3.75*x+7.5*(end[1]+0.5+(x-y)/2);
+								d = -3.75*x+7.5*(end[2]+0.5+(x-z)/2);
+								if (a.position.x.toFixed(2)==b.toFixed(2) && a.position.y.toFixed(2)==c.toFixed(2) && a.position.z.toFixed(2)==d.toFixed(2) && choptable.length>0) {
+									selection = choptable.splice(Math.floor(Math.random()*choptable.length),1)
+									end = [selection[0][0],selection[0][1],selection[0][2]];
+								}
+								else if (choptable.length == 0) {
+									end = maxpath[Math.floor(Math.random()*mplpick)]
+								}
+							}
+						}
+
+						path = [];
+						path.push(start);
+						here = start;
+						unvisited = [];
+						for (var j=0;j<x;j++){
+							unvisited[j]=[];
+							for (var k=0;k<y;k++) {
+								unvisited[j][k]=[];
+								for (var l=0;l<z;l++) {
+									unvisited[j][k][l]=1;
+								};
+							};
+						};
+						unvisited[here[0]][here[1]][here[2]]=0;
+						unvisited[doorcoords[0]][doorcoords[1]][doorcoords[2]]=0;
+						while (!(here[0] == end[0] && here[1] == end[1] && here[2] == end[2]) && (path.length > 0)) {
+							var neighbors = [];
+							var potential = [];
+							if (here[0]+1<x) {potential.push([here[0]+1,here[1],here[2]])};
+							if (here[1]+1<y) {potential.push([here[0],here[1]+1,here[2]])};
+							if (here[2]+1<z) {potential.push([here[0],here[1],here[2]+1])};
+							if (here[0]-1>=0) {potential.push([here[0]-1,here[1],here[2]])};
+							if (here[1]-1>=0) {potential.push([here[0],here[1]-1,here[2]])};
+							if (here[2]-1>=0) {potential.push([here[0],here[1],here[2]-1])};
+							for (j=0;j<potential.length;j++) {
+							if (unvisited[potential[j][0]][potential[j][1]][potential[j][2]]==1 && ((potential[j][1]==here[1]&&potential[j][2]==here[2]&&(wx[Math.ceil((potential[j][0]+here[0])/2)][potential[j][2]][potential[j][1]]==true)) || (potential[j][0]==here[0]&&potential[j][2]==here[2]&&wz[Math.ceil((potential[j][1]+here[1])/2)][potential[j][0]][potential[j][2]]==true) || (potential[j][0]==here[0]&&potential[j][1]==here[1]&&wy[Math.ceil((potential[j][2]+here[2])/2)][potential[j][0]][potential[j][1]]==true))) {
+									neighbors = potential[j];
+								};
+							};
+							if (neighbors.length==3) {
+								next = neighbors;
+								path.push(next);
+								here = next;
+								unvisited[next[0]][next[1]][next[2]]=0;
+							}
+							else {here = path.pop()};
+						};
+						if (keypath.length<path.length) {
+							keypath = path;
+							var kend=end;
+						}
+						for (j=0;j<doorcount;j++) {
+							if (scene.getObjectByName("key"+j)) {
+								a = scene.getObjectByName("key"+j)
+								b = -3.75*x+7.5*(kend[0]+0.5)
+								c = -3.75*x+7.5*(kend[1]+0.5+(x-y)/2)
+								d = -3.75*x+7.5*(kend[2]+0.5+(x-z)/2)
+								if (a.position.x.toFixed(2)==b.toFixed(2) && a.position.y.toFixed(2)==c.toFixed(2) && a.position.z.toFixed(2)==d.toFixed(2)) {
+									kend = maxpath[Math.floor(Math.random()*mplpick)];
+								}
+							}
+						}
+
+					};
+					if (kend[0] == fstart[0] && kend[1] == fstart[1] && kend[2] == fstart[2]) {kend = maxpath[Math.ceil(Math.random()*maxpath.length/2)-1]};
+					
+					doorcolor = new THREE.Color;
+					doorcolor.setHSL(Math.random(),1,0.5);
+					demissive = doorcolor;
+					demissive.offsetHSL(0,0,-0.1);
+					
+					keyringgeom = new THREE.TorusGeometry(0.5,0.125,20,40);
+					stickgeom = new THREE.CylinderGeometry(0.125,0.125,1,20);
+					tooth1geom = new THREE.CylinderGeometry(0.125,0.125,0.25,20);
+					tooth2geom = new THREE.CylinderGeometry(0.125,0.125,0.3125,20);
+					var material = new THREE.MeshPhongMaterial({color:doorcolor,emissive:demissive,shininess:100});
+					keyring = new THREE.Mesh(keyringgeom,material);
+					stick = new THREE.Mesh(stickgeom,material);
+					tooth1 = new THREE.Mesh(tooth1geom,material);
+					tooth2 = new THREE.Mesh(tooth2geom,material);
+					tooth1.rotation.set(0,0,Math.PI/2);
+					tooth2.rotation.set(0,0,Math.PI/2);
+					stick.position.set(0,0.75+0.125/2,0);
+					tooth1.position.set(0.125+0.125/2,(0.625+0.125)/2+0.75-0.125*4/2,0);
+					tooth2.position.set((0.3125+0.125)/2,(0.625+0.125)/2+1-0.125*3/2,0);
+					keyring.applyMatrix(new THREE.Matrix4().makeScale(1,0.625,1));
+					key = new THREE.Group();
+					key.add(keyring,stick,tooth1,tooth2);
+					key.position.set(-3.75*x+7.5*(kend[0]+0.5),-3.75*x+7.5*(kend[1]+0.5+(x-y)/2),-3.75*x+7.5*(kend[2]+0.5+(x-z)/2));
+					key.rotation.x += Math.PI;
+					key.rotation.z -= Math.PI/8;
+					key.name = "key"+i;
+					scene.add(key);
+					
+					if (orient == "xa") {doorgeom = new THREE.BoxGeometry(2,5.5,5.5,2,5,5)}
+					else if (orient == "ya") {doorgeom = new THREE.BoxGeometry(5.5,2,5.5,5,2,5)}
+					else {doorgeom = new THREE.BoxGeometry(5.5,5.5,2,5,5,2)};
+					for (var j=1;j<doorgeom.faces.length+1;j+=2){
+					var hcol = Math.random()*0.1+doorcolor.getHSL().h-0.05;
+					var lcol = Math.random()*0.125+0.5-0.0625;
+					doorgeom.faces[j].color.setHSL(hcol,1,lcol);
+					doorgeom.faces[j-1].color.setHSL(hcol,1,lcol)};
+					
+					var emat = new THREE.MeshBasicMaterial({color:0xffffff,vertexColors:THREE.FaceColors});
+					doormesh = new THREE.Mesh(doorgeom,emat);
+					if (orient == "xa") {
+						if (beforecoords[0]>doorcoords[0]) {var buffer = 3.75}
+						else {var buffer = -3.75};
+						doormesh.position.set(-3.75*x+7.5*(doorcoords[0]+0.5)+buffer,-3.75*x+7.5*(doorcoords[1]+0.5+(x-y)/2),-3.75*x+7.5*(doorcoords[2]+0.5+(x-z)/2));
+					}
+					else if (orient == "ya") {
+						if (beforecoords[1]>doorcoords[1]) {var buffer = 3.75}
+						else {var buffer = -3.75};
+						doormesh.position.set(-3.75*x+7.5*(doorcoords[0]+0.5),-3.75*x+7.5*(doorcoords[1]+0.5+(x-y)/2)+buffer,-3.75*x+7.5*(doorcoords[2]+0.5+(x-z)/2));
+					}
+					else {
+						if (beforecoords[2]>doorcoords[2]) {var buffer = 3.75}
+						else {var buffer = -3.75};
+						doormesh.position.set(-3.75*x+7.5*(doorcoords[0]+0.5),-3.75*x+7.5*(doorcoords[1]+0.5+(x-y)/2),-3.75*x+7.5*(doorcoords[2]+0.5+(x-z)/2)+buffer);
+					}
+					doormesh.name = "door"+i;
+					walls.push(doormesh);
+					scene.add(doormesh);
+				}
+			}
+
+			
+			for (var i=0;i<x+1;i++) {
+				for (var j=0;j<y+1;j++) {
+					for (var k=0;k<z+1;k++) {
+							xpos = -3.75*x+7.5*(i);
+							ypos = -3.75*y+7.5*(j);
+							zpos = -3.75*z+7.5*(k);
+							var geom = new THREE.Mesh(new THREE.BoxGeometry(2,2,2),rcolor(xpos,ypos,zpos,1));
+							geom.position.set(xpos,ypos,zpos);
+							walls.push(geom);
+							scene.add(geom);
+					};
+				};
+			};
+			for (var i=0;i<x;i++) {
+				for (var j=0;j<y+1;j++) {
+					for (var k=0;k<z+1;k++) {
+							xpos = -3.75*x+7.5*(i+0.5);
+							ypos = -3.75*y+7.5*(j);
+							zpos = -3.75*z+7.5*(k);
+							var geom = new THREE.Mesh(new THREE.BoxGeometry(5.5,2,2),rcolor(xpos,ypos,zpos,1));
+							geom.position.set(xpos,ypos,zpos);
+							walls.push(geom);
+							scene.add(geom);
+					};
+				};
+			};
+			for (var i=0;i<x+1;i++) {
+				for (var j=0;j<y+1;j++) {
+					for (var k=0;k<z;k++) {
+							xpos = -3.75*x+7.5*(i);
+							ypos = -3.75*y+7.5*(j);
+							zpos = -3.75*z+7.5*(k+0.5);
+							var geom = new THREE.Mesh(new THREE.BoxGeometry(2,2,5.5),rcolor(xpos,ypos,zpos,1));
+							geom.position.set(xpos,ypos,zpos);
+							walls.push(geom);
+							scene.add(geom);
+					};
+				};
+			};
+			for (var i=0;i<x+1;i++) {
+				for (var j=0;j<y;j++) {
+					for (var k=0;k<z+1;k++) {
+							xpos = -3.75*x+7.5*(i);
+							ypos = -3.75*y+7.5*(j+0.5);
+							zpos = -3.75*z+7.5*(k);
+							var geom = new THREE.Mesh(new THREE.BoxGeometry(2,5.5,2),rcolor(xpos,ypos,zpos,1));
+							geom.position.set(xpos,ypos,zpos);
+							walls.push(geom);
+							scene.add(geom);
+					};
+				};
+			};
+			for (var i=0;i<y+1;i++) {
+				for (var j=0;j<x;j++) {
+					for (var k=0;k<z;k++) {
+						if (!(wz[i][j][k])) {
+							zpos = -3.75*y+7.5*(i);
+							xpos = -3.75*x+7.5*(j+0.5);
+							ypos = -3.75*z+7.5*(k+0.5);
+							var zgeom = new THREE.Mesh(new THREE.BoxGeometry(5.5,2,5.5),rcolor(xpos,zpos,ypos));
+							zgeom.position.set(xpos,zpos,ypos);
+							walls.push(zgeom);
+							scene.add(zgeom);
+						};
+					};
+				};
+			};
+			for (var i=0;i<x+1;i++) {
+				for (var j=0;j<z;j++) {
+					for (var k=0;k<y;k++) {
+						if (!(wx[i][j][k])) {
+							xpos = -3.75*x+7.5*(i);
+							ypos = -3.75*z+7.5*(j+0.5);
+							zpos = -3.75*y+7.5*(k+0.5);
+							var xgeom = new THREE.Mesh(new THREE.BoxGeometry(2,5.5,5.5),rcolor(xpos,zpos,ypos));
+							xgeom.position.set(xpos,zpos,ypos);
+							walls.push(xgeom);
+							scene.add(xgeom);
+						};
+					};
+				};
+			};
+			for (var i=0;i<z+1;i++) {
+				for (var j=0;j<x;j++) {
+					for (var k=0;k<y;k++) {
+						if (!(wy[i][j][k])) {
+							ypos = -3.75*z+7.5*(i);
+							xpos = -3.75*x+7.5*(j+0.5);
+							zpos = -3.75*y+7.5*(k+0.5);
+							var ygeom = new THREE.Mesh(new THREE.BoxGeometry(5.5,5.5,2),rcolor(xpos,zpos,ypos));
+							ygeom.position.set(xpos,zpos,ypos);
+							walls.push(ygeom);
+							scene.add(ygeom);
+						};
+					};
+				};
+			};
+			return;
+		};		
+						
+		document.addEventListener('keydown', function(event) {
+			//left
+			if((event.keyCode == 37 || event.keyCode == 65) && moving==false && yrot==false && zrot==false) {
+				yrot = true;
+				step = Math.PI/2/Math.floor(fps/6);
+				timer = Math.floor(fps/6);
+			}
+			//right
+			else if((event.keyCode == 39 || event.keyCode == 68) && moving==false && yrot==false && zrot==false) {
+				yrot = true;
+				step = -Math.PI/2/Math.floor(fps/6);
+				timer = Math.floor(fps/6);
+			}
+			//up
+			else if((event.keyCode == 38 || event.keyCode == 87) && moving==false && yrot==false && zrot==false) {
+				zrot = true
+				step = -Math.PI/2/Math.floor(fps/6);
+				timer = Math.floor(fps/6);
+			}
+			//down
+			else if((event.keyCode == 40 || event.keyCode == 83) && moving==false && yrot==false && zrot==false) {
+				zrot = true;
+				step = Math.PI/2/Math.floor(fps/6);
+				timer = Math.floor(fps/6);
+			}
+			else if((event.keyCode == 74) && moving==false && yrot==false && zrot==false) {
+				scene.updateMatrixWorld();
+				ctest = fray.intersectObjects(walls);
+				for (i=0;i<ctest.length;i++) {
+					if (ctest[i].object.name) {
+						for (j=0;j<inventory.length;j++) {
+							a = scene.getObjectByName("key"+inventory[j].slice(3,inventory[j].length));
+							b = scene.getObjectByName("door"+inventory[j].slice(3,inventory[j].length));
+							if (b.name == ctest[i].object.name && a.name == inventory[j] && b.name.slice(4,b.name.length) == a.name.slice(3,a.name.length)) {
+								scene.remove(b);
+								pgeom.remove(a);
+								inventory.splice(j,1);
+
+								for (k=0;k<doorcount;k++) {
+									if (walls[k].name==b.name) {
+										walls.splice(k,1)
+									}
+								}
+								
+								for (k=0;k<inventory.length;k++) {
+									c = scene.getObjectByName(inventory[k]);
+									if (k%2==0) {c.position.set(1,-1,-2.5+((k)/inventory.length))}
+									else (c.position.set(1,-1,2.5-((k-1)/inventory.length)));
+								}
+							}
+						}
+					}
+				};
+				moving = true;
+				if (ctest.length>0) {
+					open=0;
+//					ctest[0].object.material.color.setHSL(Math.random(),1,0.85);
+//					ctest[0].object.material.opacity = 1;
+				}
+				else {open=1};
+				step = -7.5/Math.floor(fps/6)*open;
+				timer = Math.floor(fps/6)*open;
+				if (startTime == 0) {startTime = Date.now()};
+			}
+			else if((event.keyCode == 75) && moving==false && yrot==false && zrot==false){
+				scene.updateMatrixWorld();
+				ctest = bray.intersectObjects(walls);
+				for (i=0;i<ctest.length;i++) {
+					if (ctest[i].object.name) {
+						for (j=0;j<inventory.length;j++) {
+							a = scene.getObjectByName("key"+inventory[j].slice(3,inventory[j].length));
+							b = scene.getObjectByName("door"+inventory[j].slice(3,inventory[j].length));
+							if (b.name == ctest[i].object.name && a.name == inventory[j] && b.name.slice(4,b.name.length) == a.name.slice(3,a.name.length)) {
+								scene.remove(b);
+								pgeom.remove(a);
+								inventory.splice(j,1);
+								for (k=0;k<doorcount;k++) {
+									if (walls[k].name==b.name) {
+										walls.splice(k,1)
+									}
+								}
+								for (k=0;k<inventory.length;k++) {
+									c = scene.getObjectByName(inventory[k]);
+									if (k%2==0) {c.position.set(1,-1,-2.5+((k)/inventory.length))}
+									else (c.position.set(1,-1,2.5-((k-1)/inventory.length)));
+								}
+							}
+						}
+					}
+				};
+				moving = true;
+				if (ctest.length>0) {
+					open=0;
+				}
+				else {open=1};
+				step = 7.5/Math.floor(fps/6)*open;
+				timer = Math.floor(fps/6)*open;
+				if (startTime == 0) {startTime = Date.now()};
+			}
+		});		
+		
+		window.addEventListener( 'resize', onWindowResize, false );
+
+		function onWindowResize(){
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			camera2.aspect = window.innerWidth / window.innerHeight;
+			camera2.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+		}		
+
+		String.prototype.toHHMMSS = function () {
+			var sec_num = parseInt(this, 10); // don't forget the second param
+			var hours   = Math.floor(sec_num / 3600000);
+			var minutes = Math.floor((sec_num - (hours * 3600000)) / 60000);
+			var seconds = (sec_num - (hours * 3600000) - (minutes * 60000))/1000;
+
+			if (hours   < 10) {hours   = "0"+hours;}
+			if (minutes < 10) {minutes = "0"+minutes;}
+			if (seconds < 10) {seconds = "0"+seconds;}
+			var time    = hours+':'+minutes+':'+seconds;
+			return time;
+		}		
+		
+		function init() {
+			sign = new Array();
+			dmode = Math.floor(Math.random()*4);
+			rainbow = new THREE.Color();
+			rainbow.setHSL(Math.random(),0.75,0.10);
+			wallcolor = new THREE.Color();
+			wallcolor.setHSL(Math.random(),1,0.75);
+			
+			cdelt = 0
+			while (cdelt<1/4 || cdelt>3/4) {
+				ired=Math.random();
+				igreen=Math.random();
+				iblue=Math.random();
+				fred=Math.random();
+				fgreen=Math.random();
+				fblue=Math.random();
+				ci = new THREE.Color(ired,igreen,iblue);
+				cf = new THREE.Color(fred,fgreen,fblue);
+				ci.setHSL(ci.getHSL().h,1,0.7);
+				cf.setHSL(cf.getHSL().h,1,0.7);
+				cdelt = Math.abs(cf.getHSL().h-ci.getHSL().h)
+			}
+			power=1;
+//			if (cf.getHSL().h>ci.getHSL().h) {
+//				power=1
+//				console.log("surrounding hue greater",cdelt)
+//			}
+//			else {
+//				power=1
+//				console.log("corner hue greater",cdelt)
+//			}
+			
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight,1,50);
+			camera2 = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight,1,1000);
+			renderer = new THREE.WebGLRenderer({antialias:false});
+//	        renderer.setClearColor(0x9CB4FF, 1.0);
+			renderer.setClearColor(0x000000, 1.0);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			inventory = [];
+			win = false;
+			startTime = 0;
+			time = Date.now();
+			ptime = Date.now();
+			fps = 30;
+			frames = 0;
+			
+			text2 = document.createElement('div');
+			text2.style.position = 'absolute';
+			text2.style.zIndex = 1;
+			text2.style.width = 100;
+			text2.style.height = 100;
+			text2.style.color = "white";
+			text2.style.fontSize = "400%";
+			text2.style.fontWeight = "bold";
+			text2.style.fontFamily = "Helvetica";
+			text2.innerHTML = "";
+			text2.style.top = 0 + 'px';
+			text2.style.left = 13 + 'px';
+			document.body.appendChild(text2);
+			
+			light = new THREE.DirectionalLight(0xFFFFFF, 1);
+			light.position.set(-50,30,-30);
+			light.lookAt({x:0,y:0,z:0});
+			light2 = new THREE.DirectionalLight(0xFFFFFF, .5);
+			light2.position.set(50,30,30);
+			light2.lookAt({x:0,y:0,z:0});
+			blight = new THREE.DirectionalLight(0xFFFFFF, .25);
+			blight.position.set(-50,-30,-30);
+			blight.lookAt({x:0,y:0,z:0});
+			blight2 = new THREE.DirectionalLight(0xFFFFFF, .75);
+			blight2.position.set(50,-30,30);
+			blight2.lookAt({x:0,y:0,z:0});
+			
+			scene.add(light);
+			scene.add(light2);
+			scene.add(blight);
+			scene.add(blight2);
+			
+			walls = new Array();
+			
+			pmat = new THREE.MeshLambertMaterial({opacity:0,color:(0xFF0000),transparent:true});
+			pgeom = new THREE.Mesh(new THREE.BoxGeometry(2.5,2.5,2.5),pmat);
+			pgeom.name = "pgeom";
+			
+			ogeom = new THREE.IcosahedronGeometry(0.5,2);
+			minigeom = new THREE.IcosahedronGeometry(0.2,1)
+			lastcolor = 0
+			for (var i=0;i<ogeom.faces.length;i++) {
+//				ogeom.faces[i].color.setHSL(Math.random(),1,0.5);
+				ogeom.faces[i].color.setHSL(lastcolor,1,0.5);
+//				lastcolor += 0.00;
+			};
+			for (var i=0;i<minigeom.faces.length;i++) {
+//				minigeom.faces[i].color.setHSL(Math.random(),1,0.5);
+				minigeom.faces[i].color.setHSL(lastcolor,1,0.5);
+			};
+			var emat = new THREE.MeshBasicMaterial({color:0xffffff,vertexColors:THREE.FaceColors});
+			egeom = new THREE.Mesh(ogeom,emat);
+			mgeom = new THREE.Mesh(minigeom,emat);
+			egeom.add(mgeom);
+			mgeom.position.set(0.8,0,0);
+			
+			pgeom.position.set(-3.75*x+3.75,1.5,-3.75*y+3.75);
+			egeom.position.set(3.75*x-3.75,0.5+egeom.geometry.parameters.radius,3.75*y-3.75);
+			
+			pgeom.add(camera);
+			camera.position.set(4.6,0,0);
+			camera.rotation.y += Math.PI/2;
+			
+			cstep = Math.PI/900/2;
+			theta = 0;
+			origin = new THREE.Vector3(0,0,0);
+//			camera2.position.set(x*9,y*9,z*9);
+			camera2.position.set((x*10+y*10+z*10)/3,(x*10+y*10+z*10)/3,(x*10+y*10+z*10)/3);
+			camera2.lookAt(new THREE.Vector3(0,0,0));
+			
+			scene.add(camera2);
+			scene.add(pgeom,egeom);
+			
+			zrot = false;
+			yrot = false;
+			moving = false;
+			step = 0;
+			timer = 0;			
+			
+			freset = new THREE.Vector3(-1,0,0);
+			breset = new THREE.Vector3(1,0,0);
+			
+			fdir = new THREE.Vector3()
+			bdir = new THREE.Vector3()
+			
+			fdir.copy(freset);
+			bdir.copy(breset);
+			
+			fray = new THREE.Raycaster(pgeom.position,fdir,0,7.5);		
+			bray = new THREE.Raycaster(pgeom.position,bdir,0,7.5);	
+		}
+		
+		function rcolor(xpos,ypos,zpos,solid) {
+//			ired=0.5782883906861935
+//			igreen=0.3651265192238151
+//			iblue=0.2654879790916187
+//			fred=0.10020581538135809
+//			fgreen=0.9396080471964858
+//			fblue=0.3800278255141003
+			maxdist = Math.floor(Math.sqrt(Math.pow(7.5*x,2)+Math.pow(7.5*y,2)+Math.pow(7.5*z,2)));
+//			maxdist = Math.floor(Math.sqrt(Math.pow(2.5+7.5*x,2)+Math.pow(2.5+7.5*y,2)+Math.pow(2.5+7.5*z,2)));
+			dist = Math.floor(Math.sqrt(Math.pow(3.75*x-xpos,2)+Math.pow(3.75*y-ypos,2)+Math.pow(3.75*z-zpos,2)));
+//			distratio = dist/maxdist+(Math.random()-0.5);
+			distratio = Math.pow(dist/maxdist,power);
+			rdelt=fred-ired;
+			gdelt=fgreen-igreen;
+			bdelt=fblue-iblue;
+			red=distratio*rdelt+ired;
+			green=distratio*gdelt+igreen;
+			blue=distratio*bdelt+iblue;
+			fcolor = new THREE.Color(red,green,blue);
+			if (dmode==3) {fcolor = new THREE.Color(Math.random(),Math.random(),Math.random()); fcolor.setHSL(fcolor.getHSL().h,1,0.7);}
+			else if (dmode==2) {fcolor.setHSL(dist/maxdist,1,0.7)}
+			else {fcolor.setHSL(fcolor.getHSL().h,1,0.7)};
+//			fcolor = new THREE.Color(1,1,1);
+			
+			if (solid==1) {
+//				fcolor = new THREE.Color(fred,fgreen,fblue);		
+//				reco = new THREE.Color(fred, fgreen, fblue);
+//				reco.offsetHSL(0.33,0,0.5);
+//				renderer.setClearColor(reco,1);
+//				fcolor.offsetHSL(0.1,0,0);
+//				fcolor.setHSL(0,0,0);
+				tr = false
+			}
+			else if (solid==0) {tr=true}
+			else if (Math.random()>=0.5){tr=true}
+			else {tr=false};
+			var mat = new THREE.MeshLambertMaterial({opacity:0.9,color:fcolor,transparent:tr});
+//			var mat = new THREE.MeshLambertMaterial({opacity:0.9,color:fcolor,transparent:true});
+//			var mat = new THREE.MeshLambertMaterial({opacity:1,color:fcolor,transparent:false});
+			return mat;
+		}
+		
+		function renderScene() {						
+			if (dmode==0) {
+				for (i=0;i<walls.length;i++){
+					walls[i].material.color.offsetHSL(0.002,0,0)
+				}
+			}
+			
+//			rainbow.offsetHSL(0.002,0,0);
+//			renderer.setClearColor(rainbow.getHex(),1);
+			
+			if (dmode==4) {
+				for (i=0;i<walls.length;i++){
+					state = walls[i].material.color.getHSL();
+//					if (state.l<=0.15) {
+					if (state.l<=0.25) {
+						sign[i]=1;
+						walls[i].material.color.offsetHSL(Math.random()*0.25,0,Math.random()*0.2+0.6);
+						walls[i].material.color.offsetHSL(0,0,Math.random()*0.2+0.6);
+					}
+//					else if (state.l >= 0.5) {
+					else if (state.l >= 0.7) {
+						sign[i]=-1.4
+						if (Math.random()<0.001){walls[i].material.color.setHSL(0,0,0.18)}
+					}
+					walls[i].material.color.offsetHSL(0,0,0.0033*sign[i]);
+					walls[i].material.opacity = state.l;
+				};
+			}
+
+			egeom.rotation.y+=0.02;
+			egeom.rotation.z+=0.06;
+			mgeom.rotation.y+=0.05;
+			mgeom.rotation.z+=0.025;
+
+			for (var i=0;i<egeom.geometry.faces.length;i++) {
+				egeom.geometry.faces[i].color.offsetHSL(0.0033,0,0);
+			};
+			for (var i=0;i<egeom.children[0].geometry.faces.length;i++) {
+				egeom.children[0].geometry.faces[i].color.offsetHSL(0.0033,0,0);
+			};
+
+			egeom.geometry.colorsNeedUpdate = true;
+			egeom.children[0].geometry.colorsNeedUpdate = true;
+
+			if (moving==true && timer>0) {pgeom.translateX(step); timer-=1};
+			if (yrot==true && timer>0) {pgeom.rotateOnAxis(pgeom.up,step); timer-=1};
+			if (zrot==true && timer>0) {pgeom.rotateOnAxis(new THREE.Vector3(0,0,1),step); timer-=1};
+			if (timer==0) {
+				moving=false;
+				yrot=false;
+				zrot=false;
+				fdir.copy(freset);
+				bdir.copy(breset);
+				fdir.applyEuler(pgeom.rotation);
+				bdir.applyEuler(pgeom.rotation);
+				fray.set(pgeom.position,fdir);
+				bray.set(pgeom.position,bdir);
+				timer=-1;
+			};
+			requestAnimationFrame(renderScene);
+			if (win==true) {
+				theta += cstep
+				camera2.position.set(x*12*Math.cos(theta),3.75*y+y*2.5*Math.sin(theta*2),z*12*Math.sin(theta));
+				camera2.lookAt(new THREE.Vector3(0,0,0));
+			};
+			if (win==true) {renderer.render(scene,camera2)}
+			else {renderer.render(scene,camera)};
+			if (Math.floor(pgeom.position.x.toFixed(2))==Math.floor(egeom.position.x.toFixed(2)) && Math.floor(pgeom.position.y.toFixed(2))==Math.floor(egeom.position.y.toFixed(2)) && Math.floor(pgeom.position.z.toFixed(2))==Math.floor(egeom.position.z.toFixed(2)) && win==false) {
+				win = true;
+				for (i=0;i<walls.length;i++) {
+					try {walls[i].visible = false}
+					catch(e) {}
+				}
+				pgeom.position.set(-3.75*x+7.5*(fstart[0]+0.5),-3.75*y+7.5*(fstart[1]+0.5),-3.75*z+7.5*(fstart[2]+0.5));
+				scene.add(pathmesh);
+				pgeom.material.opacity=1;
+				
+			};
+			
+			for(i=0;i<doorcount;i++) {
+				a = scene.getObjectByName("key"+i);
+				b = scene.getObjectByName("door"+i);
+				if (a && Math.floor(pgeom.position.x.toFixed(2))==Math.floor(a.position.x.toFixed(2)) && Math.floor(pgeom.position.y.toFixed(2))==Math.floor(a.position.y.toFixed(2)) && Math.floor(pgeom.position.z.toFixed(2))==Math.floor(a.position.z.toFixed(2))) {
+					inventory.push(a.name);
+					scene.remove(a);
+					pgeom.add(a);
+					a.rotation.set(0,0,Math.PI/2);
+					for (k=0;k<inventory.length;k++) {
+						c = scene.getObjectByName(inventory[k]);
+						if (k%2==0) {c.position.set(1,-1,-2.5+((k)/inventory.length))}
+						else (c.position.set(1,-1,2.5-((k-1)/inventory.length)));
+					}
+				}
+			}
+			
+			time = Date.now();
+			if (startTime && win == false) {elapsed = (time - startTime); text2.innerHTML = elapsed.toString().toHHMMSS();};
+			frames++;
+			if (time>ptime+1000) {fps=Math.max(Math.round(frames*1000/(time-ptime)),6); ptime=Date.now(); frames=0}
+			for (i=0;i<doorcount;i++) {
+				try {
+					a = scene.getObjectByName("key"+i)
+					if (a.parent.type=="Scene") {a.rotation.y += 0.02; a.rotation.x += 0.0066}
+				}
+				catch(e) {}
+			}
+        };
+		
+		x = Math.round(Math.random()*3+3);
+		y = Math.round(Math.random()*3+3);
+		z = Math.round(Math.random()*3+3);
+		init();
+		mazegen(x,y,z);
+
+		$("#WebGL-output").append(renderer.domElement);
+        renderScene();
+
+	  });
+    </script>
+  </body>
+</html>
